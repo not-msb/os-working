@@ -3,13 +3,16 @@ ENTRY(_start)
 SECTIONS {
     . = 1M;
 
+    .boot : ALIGN(4K) {
+        KEEP(*(.multiboot))
+    }
+
     .text : ALIGN(4K) {
-        *(.multiboot)
-        *(.text)
+        *(.text .text.*)
     }
 
     .rodata : ALIGN(4K) {
-        *(.rodata)
+        *(.rodata .rodata.*)
     }
 
     .data : ALIGN(4K) {

@@ -1,4 +1,6 @@
 global _start
+extern main
+extern boot_info_addr
 
 section .bss
 align 4096
@@ -8,14 +10,23 @@ p3_table:
     resb 4096
 p2_table:
     resb 4096
+p2_table_2:
+    resb 4096
+p2_table_3:
+    resb 4096
+p2_table_4:
+    resb 4096
+align 16
 stack_bottom:
-    resb 64
+    resb 1024*1024
 stack_top:
 
 section .text
 bits 32
 _start:
     mov esp, stack_top
+    mov ebp, esp
+    mov [boot_info_addr], ebx
 
     call check_multiboot
     call check_cpuid
@@ -26,12 +37,10 @@ _start:
 
     ; load the 64-bit GDT
     lgdt [gdt64.pointer]
-
     jmp gdt64.code:long_mode_start
-
-    ; print `OK` to screen
-    mov dword [0xb8000], 0x2f4b2f4f
+.hang:
     hlt
+    jmp .hang
 
 error:
     mov dword [0xb8000], 0x4f524f45
@@ -112,9 +121,19 @@ set_up_page_tables:
     or eax, 0b11 ; present + writable
     mov [p3_table], eax
 
-    ; TODO map each P2 entry to a huge 2MiB page
-    mov ecx, 0         ; counter variable
+    mov eax, p2_table_2
+    or eax, 0b11
+    mov [p3_table+8], eax
 
+    mov eax, p2_table_3
+    or eax, 0b11
+    mov [p3_table+16], eax
+
+    mov eax, p2_table_4
+    or eax, 0b11
+    mov [p3_table+24], eax
+
+    mov ecx, 0         ; counter variable
 .map_p2_table:
     ; map ecx-th P2 entry to a huge page that starts at address 2MiB*ecx
     mov eax, 0x200000  ; 2MiB
@@ -125,6 +144,43 @@ set_up_page_tables:
     inc ecx            ; increase counter
     cmp ecx, 512       ; if counter == 512, the whole P2 table is mapped
     jne .map_p2_table  ; else map the next entry
+
+    mov ecx, 0
+.map_p2_table_2:
+    mov eax, 0x200000
+    lea edx, [ecx+512]
+    mul edx
+    or eax, 0b10000011
+    mov [p2_table_2 + ecx * 8], eax
+
+    inc ecx
+    cmp ecx, 512
+    jne .map_p2_table_2
+
+    mov ecx, 0
+.map_p2_table_3:
+    mov eax, 0x200000
+    lea edx, [ecx+1024]
+    mul edx
+    or eax, 0b10000011
+    mov [p2_table_3 + ecx * 8], eax
+
+    inc ecx
+    cmp ecx, 512
+    jne .map_p2_table_3
+
+    mov ecx, 0
+.map_p2_table_4:
+    mov eax, 0x200000
+    lea edx, [ecx+1536]
+    mul edx
+    or eax, 0b10000011
+    mov [p2_table_4 + ecx * 8], eax
+
+    inc ecx
+    cmp ecx, 512
+    jne .map_p2_table_4
+
     ret
 
 enable_paging:
@@ -170,8 +226,7 @@ long_mode_start:
     mov fs, ax
     mov gs, ax
 
-    extern main64
-    call main64
+    call main
 .hang:
     hlt
     jmp .hang

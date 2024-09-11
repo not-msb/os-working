@@ -71,7 +71,8 @@ pub fn build(b: *std.Build) void {
     const run_cmd = b.addSystemCommand(&[_][]const u8{
         "qemu-system-x86_64",
         "-cdrom",
-        "zig-out/bin/disk.iso"
+        "zig-out/bin/disk.iso",
+        "-m", "4G",
     });
     run_cmd.step.dependOn(iso_step);
 

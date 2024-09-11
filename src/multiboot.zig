@@ -21,7 +21,7 @@ pub const MultiBoot = extern struct {
 };
 
 pub const BootInfo = extern struct {
-    flags: u32 ,
+    flags: u32,
     mem_lower: u32,
     mem_upper: u32,
     boot_devie: u32,
@@ -53,4 +53,78 @@ pub const BootInfo = extern struct {
     framebuffer_type: u8 align(1),
     framebuffer_palette_addr: u32 align(1),
     framebuffer_palette_num_colors: u16,
+
+    pub fn flagIsSet(self: *const BootInfo, index: u5) bool {
+        const mask: u32 = @as(u32, 1) << index;
+        const flag = self.flags & mask;
+        return flag != 0;
+    }
+
+    pub fn mmap_iter(self: *const BootInfo) MmapIter {
+        return .{
+            .end = self.mmap_addr+self.mmap_length,
+            .current = self.mmap_addr,
+        };
+    }
+
+    pub fn kernel_symbols(self: *const BootInfo) ?KernelSymbolTable {
+        if (!self.flagIsSet(5))
+            return null;
+
+        return .{
+            .num = self._syms0,
+            .size = self._syms1,
+            .addr = self._syms2,
+            .shndx = self._syms3,
+        };
+    }
+
+    pub fn kernel_sections(self: *const BootInfo) ?[]const align(1) Section {
+        const symbols = self.kernel_symbols() orelse return null;
+        //if (table.size != 64)
+        //1    return Console.bsod("KernelSymbolTable.size isn't 64");
+
+        const sections: [*]const align(1) Section = @ptrFromInt(symbols.addr);
+        return sections[0..symbols.num];
+    }
+};
+
+pub const Mmap = extern struct {
+    size: u32 align(4),
+    base_addr: u64 align(4),
+    length: u64 align(4),
+    @"type": u32 align(4),
+};
+
+pub const MmapIter = struct {
+    end: u32,
+    current: u32,
+
+    pub fn next(self: *MmapIter) ?Mmap {
+        if (self.current >= self.end) return null;
+
+        const mmap: *const Mmap = @ptrFromInt(self.current);
+        self.current += mmap.size + 4;
+        return mmap.*;
+    }
+};
+
+const KernelSymbolTable = struct {
+    num: u32,
+    size: u32,
+    addr: u32,
+    shndx: u32,
+};
+
+const Section = extern struct {
+    name: u32,
+    @"type": u32,
+    flags: u64,
+    addr: u64,
+    offset: u64,
+    size: u64,
+    link: u32,
+    info: u32,
+    addr_align: u64,
+    ent_size: u64,
 };

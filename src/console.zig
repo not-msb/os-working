@@ -1,12 +1,12 @@
 const std = @import("std");
 
-const VgaChar = packed struct {
-    code_point: u8,
-    foreground: VgaColor,
-    background: VgaColor,
+pub const VgaChar = packed struct {
+    code_point: u8 = 0,
+    foreground: VgaColor = .White,
+    background: VgaColor = .Black,
 };
 
-const VgaColor = enum(u4) {
+pub const VgaColor = enum(u4) {
     Black = 0,
     Blue = 1,
     Green = 2,
@@ -38,7 +38,6 @@ pub const Console = struct {
 
     pub fn clear(self: *Console) void {
         const c = .{
-            .code_point = 0,
             .foreground = self.foreground,
             .background = self.background,
         };
@@ -48,8 +47,8 @@ pub const Console = struct {
     }
 
     pub fn putc(self: *Console, c: u8) void {
-        const row = self.index / 80;
-        const col = self.index % 80;
+        var row = self.index / 80;
+        var col = self.index % 80;
 
         // More may be added later
         switch (c) {
@@ -61,12 +60,17 @@ pub const Console = struct {
         }
 
         if (self.index >= 25*80) {
-            self.index = 0;
+            self.index = 24*80+1;
+            row = 24;
+            col = 0;
+
             std.mem.copyForwards(
                 VgaChar,
                 @as(*[24*80]VgaChar, @volatileCast(@ptrCast(self.buffer[0..23]))),
                 @as(*[24*80]VgaChar, @volatileCast(@ptrCast(self.buffer[1..]))),
             );
+
+            @memset(&self.buffer[24], .{});
         }
 
         self.buffer[row][col] = .{
@@ -79,5 +83,13 @@ pub const Console = struct {
     pub fn puts(self: *Console, s: []const u8) void {
         for (s) |c|
             self.putc(c);
+    }
+
+    pub fn bsod(msg: []const u8) void {
+        var console = Console{};
+        console.set_color(.White, .Blue);
+        console.clear();
+        console.puts("[ERROR]: ");
+        console.puts(msg);
     }
 };
