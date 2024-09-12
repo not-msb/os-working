@@ -16,7 +16,8 @@ const Entry = extern struct {
             .offset_2 = 0,
             .offset_3 = 0,
             .selector = 0,
-            .bits = 0b1110_0000_0000,
+            .bits = 0,
+            //.bits = 0b1110_0000_0000,
         };
     }
 
@@ -75,7 +76,8 @@ pub const InterruptDescriptorTable align(16) = extern struct {
     hv_injection_exception: Entry = Entry.missing(),
     vmm_communication_exception: Entry = Entry.missing(),
     security_exception: Entry = Entry.missing(),
-    _reserved3: Entry = Entry.missing(),
+    _reserved2: Entry = Entry.missing(),
+    interrupts: [256-32]Entry = .{Entry.missing()} ** (256-32),
 
     fn pointer(self: *const InterruptDescriptorTable) TablePointer {
         return .{

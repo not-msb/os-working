@@ -18,7 +18,7 @@ p2_table_4:
     resb 4096
 align 16
 stack_bottom:
-    resb 1024*1024
+    resb 128*1024
 stack_top:
 
 section .text

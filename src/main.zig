@@ -347,7 +347,7 @@ export fn main() void {
     console.clear();
     console.puts("Still works\n");
 
-    var buf: [4096]u8 = undefined;
+    var buf: [8*1024]u8 = undefined;
     var str = std.fmt.bufPrint(&buf, "flags: 0b{b}\n", .{boot_info.flags}) catch @panic("Failed bufPrint");
     console.puts(str);
 
@@ -381,6 +381,12 @@ export fn main() void {
     );
     load_tss(tss_selector);
 
+    _ = idt.breakpoint.setHandler(breakpointHandler);
+    _ = idt.double_fault
+        .setHandler(doubleFaultHandler)
+        .setStackIndex(DOUBLE_FAULT_IST_INDEX);
+    idt.load();
+
     const fmt =
         \\debug
         \\CodeSelector:
@@ -410,22 +416,28 @@ export fn main() void {
         console.puts(str);
     }
 
+    const c = gdt.table[code_selector.selector / 8];
+    const t = gdt.table[tss_selector.selector / 8];
+    str = std.fmt.bufPrint(&buf, "code present: {}\ntss  present: {}\n", .{
+        c & Descriptor.Flags.PRESENT != 0,
+        t & Descriptor.Flags.PRESENT != 0,
+    }) catch @panic("Failed bufPrint");
+    console.puts(str);
+
+    str = std.fmt.bufPrint(&buf, "base: 0x{x}\nlimit: 0x{x}\ntss: 0x{x}\n", .{
+        @intFromPtr(&tss),
+        @sizeOf(@TypeOf(tss))-1,
+        @intFromPtr(&tss) + @sizeOf(@TypeOf(tss))}) catch @panic("Failed bufPrint");
+    console.puts(str);
+
     console.puts("Here2\n");
 
-    _ = idt.breakpoint.setHandler(breakpointHandler);
-    //_ = idt.page_fault.setHandler(pageFaultHandler);
-    _ = idt.double_fault
-        .setHandler(doubleFaultHandler)
-        .setStackIndex(DOUBLE_FAULT_IST_INDEX);
-    idt.load();
-
-    console.puts("Here3\n");
 
     //asm volatile ("int3");
     //@as(*u8, @ptrFromInt(0xfdeadbeef)).* = 0;
     rec();
 
-    console.puts("Here4\n");
+    console.puts("Here3\n");
 
     str = std.fmt.bufPrint(&buf, "IDT: {}\n", .{@sizeOf(InterruptDescriptorTable)}) catch @panic("Failed bufPrint");
     console.puts(str);

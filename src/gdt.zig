@@ -51,24 +51,24 @@ pub const Descriptor = union(enum) {
     UserSegment: u64,
     SystemSegment: struct { u64, u64 },
 
-    const Flags = struct {
-        const ACCESSED     = 1 << 40;
-        const WRITABLE     = 1 << 41;
-        const CONFORMING   = 1 << 42;
-        const EXECUTABLE   = 1 << 43;
-        const USER_SEGMENT = 1 << 44;
-        const DPL_RING_3   = 3 << 45;
-        const PRESENT      = 1 << 47;
-        const AVAILABLE    = 1 << 52;
-        const LONG_MODE    = 1 << 53;
-        const DEFAULT_SIZE = 1 << 54;
-        const GRANULARITY  = 1 << 55;
-        const LIMIT_0_15   = 0xFFFF;
-        const LIMIT_16_19  = 0xF << 48;
-        const BASE_0_23    = 0xFF_FFFF << 16;
-        const BASE_24_31   = 0xFF << 56;
+    pub const Flags = struct {
+        pub const ACCESSED     = 1 << 40;
+        pub const WRITABLE     = 1 << 41;
+        pub const CONFORMING   = 1 << 42;
+        pub const EXECUTABLE   = 1 << 43;
+        pub const USER_SEGMENT = 1 << 44;
+        pub const DPL_RING_3   = 3 << 45;
+        pub const PRESENT      = 1 << 47;
+        pub const AVAILABLE    = 1 << 52;
+        pub const LONG_MODE    = 1 << 53;
+        pub const DEFAULT_SIZE = 1 << 54;
+        pub const GRANULARITY  = 1 << 55;
+        pub const LIMIT_0_15   = 0xFFFF;
+        pub const LIMIT_16_19  = 0xF << 48;
+        pub const BASE_0_23    = 0xFF_FFFF << 16;
+        pub const BASE_24_31   = 0xFF << 56;
 
-        const COMMON =
+        pub const COMMON =
             Flags.USER_SEGMENT
             | Flags.PRESENT
             | Flags.WRITABLE
@@ -77,7 +77,7 @@ pub const Descriptor = union(enum) {
             | Flags.LIMIT_16_19
             | Flags.GRANULARITY;
 
-        const KERNEL_CODE64 = Flags.COMMON | Flags.EXECUTABLE | Flags.LONG_MODE;
+        pub const KERNEL_CODE64 = Flags.COMMON | Flags.EXECUTABLE | Flags.LONG_MODE;
     };
 
     fn dpl(self: Descriptor) PrivilegeLevel {
