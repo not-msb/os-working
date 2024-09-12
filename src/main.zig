@@ -343,7 +343,7 @@ fn load_tss(segment: SegmentSelector) void {
 }
 
 export fn main() void {
-    const boot_info: *const multiboot.BootInfo = @ptrFromInt(boot_info_addr);
+    //const boot_info: *const multiboot.BootInfo = @ptrFromInt(boot_info_addr);
     console.clear();
     console.puts("Still works\n");
 
@@ -371,7 +371,6 @@ export fn main() void {
         .setHandler(doubleFaultHandler)
         .setStackIndex(DOUBLE_FAULT_IST_INDEX);
     idt.load();
-
     console.puts("Here2\n");
 
     // TESTING EXCEPTIONS
