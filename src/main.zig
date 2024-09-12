@@ -347,22 +347,7 @@ export fn main() void {
     console.clear();
     console.puts("Still works\n");
 
-    var buf: [8*1024]u8 = undefined;
-    var str = std.fmt.bufPrint(&buf, "flags: 0b{b}\n", .{boot_info.flags}) catch @panic("Failed bufPrint");
-    console.puts(str);
-
-    if (boot_info.flagIsSet(6)) {
-        var mmap_iter = boot_info.mmap_iter();
-
-        while (mmap_iter.next()) |mmap| {
-            const str2 = std.fmt.bufPrint(
-                &buf,
-                "size: {}, start: 0x{x}, length: 0x{x}, type: {}\n",
-                .{mmap.size, mmap.base_addr, mmap.length, mmap.@"type"}
-            ) catch @panic("Failed bufPrint");
-            console.puts(str2);
-        }
-    }
+    console.puts("Here1\n");
 
     tss.interrupt_stack_table[DOUBLE_FAULT_IST_INDEX] = @intFromPtr(&STACK) + @sizeOf(@TypeOf(STACK));
 
@@ -387,151 +372,14 @@ export fn main() void {
         .setStackIndex(DOUBLE_FAULT_IST_INDEX);
     idt.load();
 
-    const fmt =
-        \\debug
-        \\CodeSelector:
-        \\  index:  {}
-        \\  rpl:    {}
-        \\TssSelector:
-        \\  index:  {}
-        \\  rpl:    {}
-        \\Gdt:
-        \\
-    ;
-    str = std.fmt.bufPrint(&buf, fmt, .{
-        code_selector.selector >> 3,
-        code_selector.selector & 0b111,
-        tss_selector.selector >> 3,
-        tss_selector.selector & 0b111,
-    }) catch @panic("Failed bufPrint");
-    console.puts(str);
-
-    for (0..gdt.len) |i| {
-        str = std.fmt.bufPrint(&buf, "  Entry: 0b{b:0>16}_{b:0>16}_{b:0>16}_{b:0>16}\n", .{
-            @as(u16, @truncate(gdt.table[i]>>48)),
-            @as(u16, @truncate(gdt.table[i]>>32)),
-            @as(u16, @truncate(gdt.table[i]>>16)),
-            @as(u16, @truncate(gdt.table[i])),
-        }) catch @panic("Failed bufPrint");
-        console.puts(str);
-    }
-
-    const c = gdt.table[code_selector.selector / 8];
-    const t = gdt.table[tss_selector.selector / 8];
-    str = std.fmt.bufPrint(&buf, "code present: {}\ntss  present: {}\n", .{
-        c & Descriptor.Flags.PRESENT != 0,
-        t & Descriptor.Flags.PRESENT != 0,
-    }) catch @panic("Failed bufPrint");
-    console.puts(str);
-
-    str = std.fmt.bufPrint(&buf, "base: 0x{x}\nlimit: 0x{x}\ntss: 0x{x}\n", .{
-        @intFromPtr(&tss),
-        @sizeOf(@TypeOf(tss))-1,
-        @intFromPtr(&tss) + @sizeOf(@TypeOf(tss))}) catch @panic("Failed bufPrint");
-    console.puts(str);
-
     console.puts("Here2\n");
 
-
+    // TESTING EXCEPTIONS
     //asm volatile ("int3");
     //@as(*u8, @ptrFromInt(0xfdeadbeef)).* = 0;
+
+    // THIS IS THE OFFENDING CODE
     rec();
 
     console.puts("Here3\n");
-
-    str = std.fmt.bufPrint(&buf, "IDT: {}\n", .{@sizeOf(InterruptDescriptorTable)}) catch @panic("Failed bufPrint");
-    console.puts(str);
-
-    str = std.fmt.bufPrint(&buf, "TablePointer: {}\n", .{@sizeOf(TablePointer)}) catch @panic("Failed bufPrint");
-    console.puts(str);
-
-    str = std.fmt.bufPrint(&buf, "InterruptStackFrame: {}\n", .{@sizeOf(InterruptStackFrame)}) catch @panic("Failed bufPrint");
-    console.puts(str);
-
-    str = std.fmt.bufPrint(&buf, "TSS: {}\n", .{@sizeOf(TaskStateSegment)}) catch @panic("Failed bufPrint");
-    console.puts(str);
-
-    str = std.fmt.bufPrint(&buf, "breakpoint: {}\n", .{idt.breakpoint}) catch @panic("Failed bufPrint");
-    console.puts(str);
-
-    //var frame_allocator = FrameAllocator.new(boot_info);
-    //var vtable: std.mem.Allocator.VTable = undefined;
-    //const allocator = frame_allocator.allocator(&vtable);
-    //_ = allocator;
-
-    //const page = 4096;
-    //console.clear();
-    //var i: usize = 0;
-    //while (true) : (i+=1) {
-    //    if (allocator.alloc(u8, page)) |ptr| {
-    //        const str2 = std.fmt.bufPrint(&buf, "Ptr: 0x{x}\n{} KiB\n{} MiB\n{} GiB\n", .{
-    //            @intFromPtr(ptr.ptr),
-    //            (i*page)/1024,
-    //            (i*page)/1024/1024,
-    //            (i*page)/1024/1024/1024,
-    //        }) catch return Console.bsod("Failed bufPrint");
-    //        var con = Console{};
-    //        con.puts(str2);
-    //    } else |err| {
-    //        const str2 = std.fmt.bufPrint(&buf, "allocatod: {} frames\n[ERROR]: {}\n", .{i, err}) catch return Console.bsod("Failed bufPrint");
-    //        console.puts(str2);
-    //        while (true) {}
-    //    }
-
-    //    //if (frame_allocator.alloc()) |frame| {
-    //    //    const str2 = std.fmt.bufPrint(&buf, "Frame: 0x{x}\n", .{frame.id*4096}) catch return Console.bsod("Failed bufPrint");
-    //    //    var con = Console{};
-    //    //    con.puts(str2);
-    //    //} else {
-    //    //    const str2 = std.fmt.bufPrint(&buf, "allocatod: {} frames\n", .{i}) catch return Console.bsod("Failed bufPrint");
-    //    //    console.puts(str2);
-    //    //    while (true) {}
-    //    //}
-    //}
-            //const str3 = std.fmt.bufPrint(&buf, "allocatod: {} frames\n", .{max}) catch return Console.bsod("Failed bufPrint");
-            //console.puts(str3);
-
-    //const symbols = boot_info.kernel_symbols().?;
-    //const sections = boot_info.kernel_sections().?;
-    //console.puts("elf sections:\n");
-    //for (sections) |section| {
-    //    const shn = sections[symbols.shndx];
-    //    const name: [*:0]const u8 = @ptrFromInt(shn.addr+section.name);
-
-    //    const str2 = std.fmt.bufPrint(&buf, "{s} addr: 0x{x}, size: 0x{x}, flags: 0x{x}\n", .{name, section.addr, section.size, section.flags}) catch unreachable;
-    //    console.puts(str2);
-    //}
-
-    //const fb = FrameBuffer.new(boot_info.*);
-        //fb.draw_square(.{ .b = 0, .g = 31, .r = 0 }, 0, 0, 100, 100);
-    //fb.fill(@bitCast(VgaChar{
-    //    .code_point = 'A',
-    //    .foreground = .White,
-    //    .background = .Red,
-    //}));
-
-    //const dim = 2;
-    //var x: i32 = 0;
-    //var y: i32 = 0;
-    //var vx: i32 = 1;
-    //var vy: i32 = 1;
-
-    //while (true) {
-    //    fb.clear();
-    //    x += vx;
-    //    y += vy;
-
-    //    if (x == 0 or x >= fb.width-dim)
-    //        vx *= -1;
-    //    if (y == 0 or y >= fb.height-dim)
-    //        vy *= -1;
-
-    //    fb.draw_square(.{ .b = 0, .g = 31, .r = 0 }, @intCast(x), @intCast(y), dim, dim);
-    //    //fb.draw_square(
-    //    //    @bitCast(VgaChar{
-    //    //        .code_point = 'A',
-    //    //        .foreground = .White,
-    //    //        .background = .Red,
-    //    //    }), @intCast(x), @intCast(y), dim, dim);
-    //}
 }
